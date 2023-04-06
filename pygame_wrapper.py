@@ -26,22 +26,16 @@ class PygameWrapper:
 
         self.__state: GameState = GameState(last_frame_tick=pygame.time.get_ticks())
 
-        self.buttons: List[Button] = [Button(10, 10, 100, 50, (255, 0, 0), 'Click Me')]
+        self.init_display()
+
+        self.buttons: List[Button] = [Button(self.__rubiks_cube, window_size=self.__window_size, display=self.display,
+                                             x_px=10, y_px=10, width_px=100, height_px=50,
+                                             color=(1, 0, 0), text='Click Me')]
 
     def init_display(self):
-        def get_camera_matrix():
-            model_view = np.zeros((4, 4), dtype=np.float32)
-            projection = np.zeros((4, 4), dtype=np.float32)
-            glGetDoublev(GL_MODELVIEW_MATRIX, model_view)
-            glGetDoublev(GL_PROJECTION_MATRIX, projection)
-            view = np.dot(model_view, projection)
-            inv_view = np.linalg.pinv(view)
-            camera_pos = inv_view[:3, 3]
-            camera_dir = inv_view[:3, :3] @ np.array([0, 0, -1])
-            return camera_pos, camera_dir
         pygame.init()
         self.display = pygame.display.set_mode(size=self.__window_size,
-                                flags=DOUBLEBUF | OPENGL)
+                                               flags=DOUBLEBUF | OPENGL)
         pygame.display.set_caption("Rubiks Cube Explore")
         glEnable(GL_DEPTH_TEST)
 
@@ -49,7 +43,6 @@ class PygameWrapper:
         glMatrixMode(GL_PROJECTION)  # Applies subsequent matrix operations to the projection matrix stack.
         gluPerspective(*self.__glu_perspective)
         glTranslatef(*self.__camera_pos)
-        print(get_camera_matrix())
 
         # Setup Rubik's Cube
         glMatrixMode(GL_MODELVIEW)  # Applies subsequent matrix operations to the modelview matrix stack.
@@ -59,7 +52,8 @@ class PygameWrapper:
         glLoadIdentity()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(*GlColors4f.WHITE_SOLID.value)
-
+        # Buttons
+        [button.draw() for button in self.buttons]
         # glRotatef(self.__state.object_xy_angle[1], 1.0, 0.0, 0.0)
         # glRotatef(self.__state.object_xy_angle[0], 0.0, 1.0, 0.0)
         self.__rubiks_cube.render(object_xy_angle=self.__state.object_xy_angle)
@@ -75,9 +69,6 @@ class PygameWrapper:
             object_xy_angle[0] += mouse_xy_delta[0] * 0.2
             object_xy_angle[1] += mouse_xy_delta[1] * 0.2
             self.__state.object_xy_angle = object_xy_angle
-
-            # Buttons
-            [button.draw(self.display) for button in self.buttons]
 
     def handle_event(self):
         for event in pygame.event.get():
@@ -100,7 +91,6 @@ class PygameWrapper:
         pygame.time.wait(10)
 
     def run(self):
-        self.init_display()
 
         while True:
             self.handle_event()
