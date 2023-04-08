@@ -9,8 +9,8 @@ from pygame.locals import *
 
 from button import Button
 from data_classes import GluPerspectiveDC, GameState
-from enums import GlColors4f
-from rubiks_cube import Cube, RubiksCube
+from enums import GlColors4f, RubiksCubeRotations
+from rubiks_cube import RubiksPiece, RubiksCube
 
 
 class PygameWrapper:
@@ -28,9 +28,32 @@ class PygameWrapper:
 
         self.init_display()
 
-        self.buttons: List[Button] = [Button(self.__rubiks_cube, window_size=self.__window_size, display=self.display,
-                                             x_px=10, y_px=10, width_px=100, height_px=50,
-                                             color=(1, 0, 0), text='Click Me')]
+        self.buttons: List[Button] = self.get_buttons()
+
+    def get_buttons(self):
+        top_left_coords = (10, 10)
+
+        button_width_px = 100
+        button_height_px = 50
+        button_x_spacing_factor = 1.1
+        button_y_spacing_factor = 1.1
+        buttons: List[Button] = []
+
+        variations = ["", "'", '2']
+        var_angles = [-90, 90, -180]
+        for i, r in enumerate(RubiksCubeRotations.values()):
+            y = top_left_coords[1] + i * button_y_spacing_factor * button_height_px
+            for j, (v, angle) in enumerate(zip(variations, var_angles)):
+                text = f'{r}{v}'
+                x = top_left_coords[0] + j * button_x_spacing_factor * button_width_px
+                if r == 'B' or r == 'D' or r == 'L':
+                    angle *= -1
+                button = Button(self.__rubiks_cube, window_size=self.__window_size,
+                                x_px=x, y_px=y, width_px=button_width_px, height_px=button_height_px,
+                                text_color=(255, 255, 255, 255), background_color=(0, 255, 0, 0),
+                                text=text, face=r, angle=angle)
+                buttons.append(button)
+        return buttons
 
     def init_display(self):
         pygame.init()
@@ -46,17 +69,14 @@ class PygameWrapper:
 
         # Setup Rubik's Cube
         glMatrixMode(GL_MODELVIEW)  # Applies subsequent matrix operations to the modelview matrix stack.
-        self.__rubiks_cube: RubiksCube = RubiksCube(center_pos=(0.0, 0.0, 0.0))
+        self.__rubiks_cube: RubiksCube = RubiksCube(center_pos=(3.0, 0.0, 0.0))
 
     def draw_object(self):
-        glLoadIdentity()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glClearColor(*GlColors4f.WHITE_SOLID.value)
         # Buttons
         [button.draw() for button in self.buttons]
-        # glRotatef(self.__state.object_xy_angle[1], 1.0, 0.0, 0.0)
-        # glRotatef(self.__state.object_xy_angle[0], 0.0, 1.0, 0.0)
-        self.__rubiks_cube.render(object_xy_angle=self.__state.object_xy_angle)
+        self.__rubiks_cube.render()
 
     def handle_mouse_motion(self, event: Event):
         if self.__state.mouse_pressed:
@@ -76,9 +96,9 @@ class PygameWrapper:
                 pygame.quit()
                 quit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.buttons[0].is_clicked(pygame.mouse.get_pos()):
-                        print('Button clicked')
+                for button in self.buttons:
+                    if button.is_clicked(pygame.mouse.get_pos()):
+                        button.on_click()
 
             elif event.type == pygame.MOUSEMOTION:
                 self.handle_mouse_motion(event)

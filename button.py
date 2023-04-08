@@ -4,24 +4,29 @@ import pygame
 from OpenGL.GL import *
 from OpenGL.GLU import gluUnProject
 
+from enums import RubiksCubeRotations
 from rubiks_cube import RubiksCube
 
 
 class Button:
-    def __init__(self, rubiks_cube: RubiksCube, window_size, display, x_px, y_px, width_px, height_px, color, text=''):
+    def __init__(self, rubiks_cube: RubiksCube, window_size,
+                 x_px, y_px, width_px, height_px,
+                 text_color, background_color,
+                 text, face: str, angle: int):
         self.rubiks_cube: RubiksCube = rubiks_cube
         self.window_size: Tuple[int, int] = window_size
-        self.display = display
         self.x_px: float = x_px
         self.y_px: float = y_px
         self.z: float = 0.0
         self.width_px: int = width_px
         self.height_px: int = height_px
-        self.color: Tuple[int, int, int] = color
+        self.text_color: Tuple[int, int, int, int] = text_color
+        self.background_color: Tuple[int, int, int, int] = background_color
         self.text: str = text
 
+        self.face = face
+        self.angle = angle
         self.vertices: List[Tuple] = self.get_world_vertices()
-        print(self.vertices)
 
     @staticmethod
     def convert_screen_to_world(winx, winy, winz=0):
@@ -47,35 +52,47 @@ class Button:
 
         return [self.convert_screen_to_world(*_) for _ in screen_vertices]
 
-    def get_vertices(self):
-        top_left = (self.x_px, self.y_px, self.z)
-        bottom_left = (self.x_px, self.y_px + self.height_px, self.z)
-        bottom_right = (self.x_px + self.width_px, self.y_px + self.height_px, self.z)
-        top_right = (self.x_px + self.width_px, self.y_px, self.z)
-
-        return [top_left, bottom_left, bottom_right, top_right]
-
     def draw(self):
-        glLoadIdentity()
-        font = pygame.font.Font(None, 36)  # create a font object
-        text = font.render(self.text, True, (255, 255, 255), (0, 0, 0))  # create a surface with the text
-        texture = glGenTextures(1)  # generate a texture ID
-        glBindTexture(GL_TEXTURE_2D, texture)  # bind the texture
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)  # set texture parameters
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, text.get_width(), text.get_height(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                     pygame.image.tostring(text, "RGBA", True))  # load the surface as a texture
+        # Create font and render text onto a surface
+        font = pygame.font.Font(None, size=200)
+        text_surface = font.render(self.text, True, self.text_color, self.background_color)
 
-        glLoadIdentity()
+        # Create texture from the text surface
+        texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, text_surface.get_width(), text_surface.get_height(), 0, GL_RGBA,
+                     GL_UNSIGNED_BYTE, pygame.image.tostring(text_surface, "RGBA", True))
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
 
+        # Enable alpha blending
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        # Bind texture and render quad
+        glEnable(GL_TEXTURE_2D)
+        glBindTexture(GL_TEXTURE_2D, texture)
+        t = 1
+        quad_tex_coords = [
+            (0.0, t),
+            (0.0, 0.0),
+            (t, 0.0),
+            (t, t),
+        ]
         glBegin(GL_QUADS)
-        glColor3f(*self.color)
-        for vertex in self.vertices:
+        glColor4f(1, 1, 1, 1)
+        for i, vertex in enumerate(self.vertices):
+            glTexCoord2f(*quad_tex_coords[i])
             glVertex3fv(vertex)
         glEnd()
+
+        glDisable(GL_TEXTURE_2D)
 
     def is_clicked(self, pos):
         x, y = pos
         if self.x_px <= x <= self.x_px + self.width_px and self.y_px <= y <= self.y_px + self.height_px:
             return True
         return False
+
+    def on_click(self):
+        self.rubiks_cube.rotate(self.face, self.angle)

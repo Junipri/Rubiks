@@ -18,8 +18,8 @@ def with_dict(cls):
 
 @with_values
 class PygameWindow(IntEnum):
-    WIDTH = 640
-    HEIGHT = 480
+    WIDTH = 1000
+    HEIGHT = (9 / 16) * WIDTH
 
 
 class GlColors4f(Enum):
@@ -54,10 +54,38 @@ class Edges(Enum):
 
 @with_dict
 @with_values
-class Surfaces(Enum):
+class Surfaces(Tuple[int, int, int, int], Enum):
     FRONT = (1, 3, 7, 5)
     BACK = (0, 2, 6, 4)
     LEFT = (0, 1, 3, 2)
     RIGHT = (4, 6, 7, 5)
     TOP = (2, 3, 7, 6,)
     BOTTOM = (0, 1, 5, 4)
+
+
+@with_values
+class RubiksCubeRotations(StrEnum):
+    F = 'F'
+    B = 'B'
+    U = 'U'
+    D = 'D'
+    L = 'L'
+    R = 'R'
+
+
+@with_dict
+class RubiksAxes(Enum):
+    X = (1, 0, 0)
+    Y = (0, 1, 0)
+    Z = (0, 0, 1)
+
+
+@with_dict
+class RubiksFaceRotation(Enum):
+    F = RubiksAxes.Z.value
+    B = RubiksAxes.Z.value
+    U = RubiksAxes.Y.value
+    D = RubiksAxes.Y.value
+    L = RubiksAxes.X.value
+    R = RubiksAxes.X.value
+
